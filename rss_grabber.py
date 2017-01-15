@@ -2,7 +2,8 @@ import time
 
 import feedparser
 
-from telegram.ext import Updater, CommandHandler, Job, JobQueue
+from telegram.ext import Job, JobQueue
+from telegram.error import RetryAfter
 
 from textual_data import URLS_FILENAME
 
@@ -38,8 +39,15 @@ class RSSGrabber(object):
 
 			for chat_id in subbed_users:
 				for post in posts:
-					self.command_handler.sendMessage(bot, update_or_chatid=chat_id, message=post)
-					time.sleep(5.0)
+					while True:
+						try:
+							self.command_handler.sendMessage(bot, update_or_chatid=chat_id, message=post)
+							time.sleep(1.0)
+							break
+						except RetryAfter as e:
+							# this stupid flood control
+							print(str(e))
+							time.sleep(1.0)
 
 	def get_posts(self):
 		# local variable to temporarily storage maximum time
@@ -53,11 +61,11 @@ class RSSGrabber(object):
 				published_unix = time.mktime(entry['published_parsed'])
 				maximum_unix_time = max(maximum_unix_time, published_unix)
 				if published_unix > self.latest_post_time:
-					text = entry['title'] + "\n"
+					text = "<b>" + entry['title'] + "</b>" + "\n"
 					text += entry['content'][0]['value']
-					text = text.replace("<br />", "\n").replace("<b>", "").replace("</b>", "")
+					text = text.replace("<br />", "\n").replace("&nbsp;", " ").replace("&quot;", '"').replace("&amp;", "&")
 					# adding formatted time of posting
-					text = time.strftime('%Y-%m-%d %H:%M', entry['published_parsed']) + "\n"+ text
+					text = "<i>" + time.strftime('%Y-%m-%d %H:%M', entry['published_parsed']) + "</i>" + "\n"+ text
 					posts.append(text)
 		print("Posts", posts)#debug
 

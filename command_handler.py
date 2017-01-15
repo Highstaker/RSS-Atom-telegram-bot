@@ -1,7 +1,9 @@
 import functools
 
 from telegram.ext import CommandHandler, MessageHandler, Filters
-# from telegram import ParseMode
+from telegram.error import BadRequest
+
+from telegram import ParseMode
 from userparams import UserParams
 from textual_data import *
 from VERSION import VERSION_NUMBER
@@ -96,7 +98,7 @@ class UserCommandHandler(object):
 		print("[ERROR]", error)
 
 	def sendMessage(self, bot, update_or_chatid, message, disable_web_page_preview=True):
-		def breakLongMessage(msg, max_chars_per_message=2048):
+		def breakLongMessage(msg, max_chars_per_message=3500):
 			"""
 			Breaks a message that is too long.
 			:param max_chars_per_message: maximum amount of characters per message.
@@ -142,7 +144,13 @@ class UserCommandHandler(object):
 			chat_id = update_or_chatid
 
 		for m in breakLongMessage(message):
-			bot.sendMessage(chat_id=chat_id, text=m,
-							# parse_mode=ParseMode.MARKDOWN,
-							disable_web_page_preview=disable_web_page_preview,
-							)
+			try:
+				bot.sendMessage(chat_id=chat_id, text=m,
+								parse_mode=ParseMode.HTML,
+								disable_web_page_preview=disable_web_page_preview,
+								)
+			except BadRequest:
+				bot.sendMessage(chat_id=chat_id, text=m,
+								disable_web_page_preview=disable_web_page_preview,
+								)
+
