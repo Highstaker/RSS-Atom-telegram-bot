@@ -19,7 +19,7 @@ class RSSGrabber(object):
 
 		self.command_handler = command_handler
 
-		self.latest_post_time = time.time()
+		self.latest_post_time = 0
 
 
 	def _get_urls(self):
@@ -53,12 +53,18 @@ class RSSGrabber(object):
 				published_unix = time.mktime(entry['published_parsed'])
 				maximum_unix_time = max(maximum_unix_time, published_unix)
 				if published_unix > self.latest_post_time:
-					text = entry['content'][0]['value']
+					text = entry['title'] + "\n"
+					text += entry['content'][0]['value']
 					text = text.replace("<br />", "\n").replace("<b>", "").replace("</b>", "")
 					# adding formatted time of posting
 					text = time.strftime('%Y-%m-%d %H:%M', entry['published_parsed']) + "\n"+ text
 					posts.append(text)
 		print("Posts", posts)#debug
 
-		self.latest_post_time = maximum_unix_time
+		if not self.latest_post_time:
+			# if it is the first time, don't send content, just update the latest time
+			self.latest_post_time = maximum_unix_time
+			return []
+
+		self.latest_post_time = max(maximum_unix_time, self.latest_post_time)
 		return posts
